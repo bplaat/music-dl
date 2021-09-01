@@ -1,0 +1,6 @@
+*
+!.gitignore
+!dl.py
+!config.py.example
+!README.md
+!LICENSE

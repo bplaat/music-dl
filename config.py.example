@@ -1,0 +1,5 @@
+YOUTUBE_API_KEYS = [ ] # Insert YouTube Data v3 API keys here
+
+TRACK_DURATION_SLACK = 5
+
+DOWNLOAD_THREAD_COUNT = 4
