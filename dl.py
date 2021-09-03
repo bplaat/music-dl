@@ -17,13 +17,15 @@ def downloadThread(name):
         track = trackQueue.pop(0)
         track = json.load(urllib.request.urlopen('https://api.deezer.com/track/' + str(track['id'])))
 
-        # Search for Youtube video's for track
+        # Search for YouTube video's for track
         tryAgain = True
+        pageToken = None
         while tryAgain:
             try:
-                print('Search for YouTube video with query: ' + album['artist']['name'] + ' - ' + track['title'])
-                videos = json.load(urllib.request.urlopen('https://youtube.googleapis.com/youtube/v3/search?part=snippet&maxResults=25&type=video&q=' + urllib.parse.quote_plus(album['artist']['name'] + ' - ' + track['title']) + '&key=' + config.YOUTUBE_API_KEYS[currentYouTubeApiKeyIndex]))['items']
-                for video in videos:
+                print('Search for YouTube video with query: ' + album['artist']['name'] + ' - ' + track['title'] + (pageToken != None and ' - ' + pageToken or ''))
+                videos = json.load(urllib.request.urlopen('https://youtube.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&type=video&q=' + urllib.parse.quote_plus(album['artist']['name'] + ' - ' + track['title']) +
+                    (pageToken != None and '&pageToken=' + pageToken or '') + '&key=' + config.YOUTUBE_API_KEYS[currentYouTubeApiKeyIndex]))
+                for video in videos['items']:
                     # Check video duration to be more or less equal to real track duration
                     video = json.load(urllib.request.urlopen('https://youtube.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=' + video['id']['videoId'] + '&key=' + config.YOUTUBE_API_KEYS[currentYouTubeApiKeyIndex]))['items'][0]
                     duration = video['contentDetails']['duration'][2:]
@@ -31,7 +33,7 @@ def downloadThread(name):
                     print('Found video of ' + str(seconds) + ' seconds must be ' + str(track['duration']) + ' seconds')
                     if track['duration'] >= seconds - config.TRACK_DURATION_SLACK and track['duration'] <= seconds + config.TRACK_DURATION_SLACK:
                         # Download track video with youtube-dl add correct metadata and rename to right name
-                        os.system('youtube-dl -f bestaudio[ext=m4a] -o temp' + name + '.m4a ' + video['id'])
+                        os.system('youtube-dl --newline -f bestaudio[ext=m4a] -o temp' + name + '.m4a ' + video['id'])
                         file = mutagen.File('temp' + name + '.m4a')
                         file['\xa9nam'] = track['title']
                         file['\xa9alb'] = album['title']
@@ -43,6 +45,7 @@ def downloadThread(name):
                         os.rename('temp' + name + '.m4a', folder + '/' + folder + ' - ' + str(track['track_position']) + ' - ' + escapePath(track['title']) + '.m4a')
                         tryAgain = False
                         break
+                pageToken = videos['nextPageToken']
             except:
                 if currentYouTubeApiKeyIndex == len(config.YOUTUBE_API_KEYS) - 1:
                     print('Out of YouTube API keys!')
@@ -63,7 +66,6 @@ if len(sys.argv) >= 2:
         # When album is found create folder and download cover image
         album = json.load(urllib.request.urlopen('https://api.deezer.com/album/' + str(albums[0]['id'])))
         albumArtists = ', '.join([ artist['name'] for artist in album['contributors']])
-        folder = album['artist']['name'] + ' - ' + album['title']
         if justList:
             print('# ' + album['title'] + ' by ' + albumArtists)
             print('Released at ' + album['release_date'] + ' with ' + str(album['nb_tracks']) + ' tracks')
@@ -72,6 +74,7 @@ if len(sys.argv) >= 2:
                 trackArtists = ', '.join([ artist['name'] for artist in track['contributors']])
                 print('%d. %s (%d:%02d) by %s' % (track['track_position'], track['title'], track['duration'] / 60, track['duration'] % 60, trackArtists))
         else:
+            folder = album['artist']['name'] + ' - ' + album['title']
             os.makedirs(folder, exist_ok=True)
             urllib.request.urlretrieve(album['cover_xl'], folder + '/cover.jpg')
 
