@@ -1,6 +1,2 @@
-*
-!.gitignore
-!dl.py
-!config.py.example
-!README.md
-!LICENSE
+__pycache__
+config.py
