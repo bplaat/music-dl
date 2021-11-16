@@ -28,12 +28,10 @@ def parseDuration(duration):
 
     return seconds
 
-args = None
 album = None
-albumArtists = None
-folder = None
-trackQueue = None
+folderPath = None
 coverFilePath = None
+trackQueue = None
 def downloadThread(name):
     print('Download thread ' + name + ' starting...')
     currentYouTubeApiKeyIndex = 0
@@ -63,7 +61,7 @@ def downloadThread(name):
                         file['\xa9nam'] = track['title']
                         file['\xa9alb'] = album['title']
                         file['\xa9ART'] = [ artist['name'] for artist in track['contributors'] ]
-                        file['aART'] = albumArtists
+                        file['aART'] = [ artist['name'] for artist in album['contributors'] ]
                         file['\xa9day'] = album['release_date'].split('-')[0]
                         file['trkn'] = [ (track['track_position'], album['nb_tracks']) ]
                         file['\xa9gen'] = [ genre['name'] for genre in album['genres']['data'] ]
@@ -71,7 +69,7 @@ def downloadThread(name):
                             file["covr"] = [ MP4Cover(coverFile.read(), imageformat=MP4Cover.FORMAT_JPEG) ]
                         file.save()
 
-                        os.rename(temp_file_path, folder + '/' + album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % track['track_position']) + ' - ' + escapePath(track['title']) + '.m4a')
+                        os.rename(temp_file_path, folderPath + '/' + album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % track['track_position']) + ' - ' + escapePath(track['title']) + '.m4a')
                         tryAgain = False
                         break
                 pageToken = videos['nextPageToken']
@@ -87,7 +85,7 @@ def downloadThread(name):
     print('Download thread ' + name + ' finished...')
 
 def main():
-    global album, albumArtists, args, folder, trackQueue, coverFilePath
+    global album, folderPath, coverFilePath, trackQueue
 
     # Parse arguments
     parser = argparse.ArgumentParser(description='A Python script / tool that downloads complete albums via the YouTube API and youtube-dl with the right metadata via the Deezer API')
@@ -103,21 +101,20 @@ def main():
     if len(albums) > 0:
         # When album is found create folder
         album = json.load(urllib.request.urlopen('https://api.deezer.com/album/' + str(albums[0]['id'])))
-        albumArtists = ', '.join([ artist['name'] for artist in album['contributors']])
         if args.list:
-            print('# ' + album['title'] + ' by ' + albumArtists)
+            print('# ' + album['title'] + ' by ' + ', '.join([ artist['name'] for artist in album['contributors'] ]))
             print('Released at ' + album['release_date'] + ' with ' + str(album['nb_tracks']) + ' tracks')
             for track in album['tracks']['data']:
                 track = json.load(urllib.request.urlopen('https://api.deezer.com/track/' + str(track['id'])))
                 trackArtists = ', '.join([ artist['name'] for artist in track['contributors']])
                 print('%d. %s (%d:%02d) by %s' % (track['track_position'], track['title'], track['duration'] / 60, track['duration'] % 60, trackArtists))
         else:
-            folder = args.output + '/' + album['artist']['name'] + ' - ' + album['title']
-            os.makedirs(folder, exist_ok=True)
+            folderPath = args.output + '/' + album['artist']['name'] + ' - ' + album['title']
+            os.makedirs(folderPath, exist_ok=True)
 
             # Download album cover
             if args.cover:
-                coverFilePath = folder + '/cover.jpg'
+                coverFilePath = folderPath + '/cover.jpg'
             else:
                 _, coverFilePath = tempfile.mkstemp()
             urllib.request.urlretrieve(album['cover_xl'], coverFilePath)
