@@ -35,7 +35,7 @@ Released at 2017-06-15 with 5 tracks
 5. Lullaby (3:31) by Snail's House
 ```
 
-You can download an album without the `--list` argument:
+You can download an album without the `--list` argument and with the `--cover` argument you can also download the cover:
 
 ```
 ./dl.py "Ordinary Songs 3"

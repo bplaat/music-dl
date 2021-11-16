@@ -1,10 +1,11 @@
-#!/bin/env python
+#!/usr/bin/env python3
 # AlbumDownloader - A Python script / tool that downloads complete albums via YouTube with the right metadata via the Deezer API
 # Usage: ./dl.py "Ordinary Songs 3"
 # Usage: ./dl.py "Ordinary Songs 3" --list
-# Usage: ./dl.py "Ordinary Songs 3" -o ".." --list
+# Usage: ./dl.py "Ordinary Songs 3" -o ".." --list --cover
 
-import argparse, config, json, mutagen, os, tempfile, threading, urllib.parse, urllib.request, re
+import argparse, config, json, os, tempfile, threading, urllib.parse, urllib.request, re
+from mutagen.mp4 import MP4, MP4Cover
 
 def escapePath(path):
     path = path.replace('<', '_').replace('>', '_').replace(':', '_').replace('\"', '_').replace('/', '_')
@@ -32,6 +33,7 @@ album = None
 albumArtists = None
 folder = None
 trackQueue = None
+coverFilePath = None
 def downloadThread(name):
     print('Download thread ' + name + ' starting...')
     currentYouTubeApiKeyIndex = 0
@@ -53,19 +55,23 @@ def downloadThread(name):
                     seconds = parseDuration(video['contentDetails']['duration'])
                     print('Found video of ' + str(seconds) + ' seconds must be ' + str(track['duration']) + ' seconds')
                     if track['duration'] >= seconds - config.TRACK_DURATION_SLACK and track['duration'] <= seconds + config.TRACK_DURATION_SLACK:
-                        # Download track video with youtube-dl add correct metadata and rename to right name
+                        # Download track video with yt-dlp add correct metadata and rename to right name
                         _, temp_file_path = tempfile.mkstemp()
                         temp_file_path += '.m4a'
-                        os.system('youtube-dl --newline -f bestaudio[ext=m4a] -o "' + temp_file_path + '" "https://www.youtube.com/watch?v=' + video['id'] + '"')
-                        file = mutagen.File(temp_file_path)
+                        os.system('yt-dlp --newline -f bestaudio[ext=m4a] -o "' + temp_file_path + '" "https://www.youtube.com/watch?v=' + video['id'] + '"')
+                        file = MP4(temp_file_path)
                         file['\xa9nam'] = track['title']
                         file['\xa9alb'] = album['title']
-                        file['\xa9ART'] = ', '.join([ artist['name'] for artist in track['contributors']])
+                        file['\xa9ART'] = [ artist['name'] for artist in track['contributors'] ]
                         file['aART'] = albumArtists
                         file['\xa9day'] = album['release_date'].split('-')[0]
-                        file['trkn'] = [(track['track_position'], album['nb_tracks'])]
+                        file['trkn'] = [ (track['track_position'], album['nb_tracks']) ]
+                        file['\xa9gen'] = [ genre['name'] for genre in album['genres']['data'] ]
+                        with open(coverFilePath, 'rb') as coverFile:
+                            file["covr"] = [ MP4Cover(coverFile.read(), imageformat=MP4Cover.FORMAT_JPEG) ]
                         file.save()
-                        os.rename(temp_file_path, folder + '/' + album['artist']['name'] + ' - ' + album['title'] + ' - ' + str(track['track_position']) + ' - ' + escapePath(track['title']) + '.m4a')
+
+                        os.rename(temp_file_path, folder + '/' + album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % track['track_position']) + ' - ' + escapePath(track['title']) + '.m4a')
                         tryAgain = False
                         break
                 pageToken = videos['nextPageToken']
@@ -81,20 +87,21 @@ def downloadThread(name):
     print('Download thread ' + name + ' finished...')
 
 def main():
-    global album, albumArtists, args, folder, trackQueue
+    global album, albumArtists, args, folder, trackQueue, coverFilePath
 
     # Parse arguments
     parser = argparse.ArgumentParser(description='A Python script / tool that downloads complete albums via the YouTube API and youtube-dl with the right metadata via the Deezer API')
     parser.add_argument('album')
     parser.add_argument('-o', '--output', default=os.path.expanduser('~') + '/Music', help='The output directory')
     parser.add_argument('-l', '--list', action='store_true', help='Just list the music metadata')
+    parser.add_argument('-c', '--cover', action='store_true', help='Save album cover as a seperated file')
 
     args = parser.parse_args()
 
     # Search for album with Deezer API
     albums = json.load(urllib.request.urlopen('https://api.deezer.com/search/album?q=' + urllib.parse.quote_plus(args.album)))['data']
     if len(albums) > 0:
-        # When album is found create folder and download cover image
+        # When album is found create folder
         album = json.load(urllib.request.urlopen('https://api.deezer.com/album/' + str(albums[0]['id'])))
         albumArtists = ', '.join([ artist['name'] for artist in album['contributors']])
         if args.list:
@@ -107,7 +114,13 @@ def main():
         else:
             folder = args.output + '/' + album['artist']['name'] + ' - ' + album['title']
             os.makedirs(folder, exist_ok=True)
-            urllib.request.urlretrieve(album['cover_xl'], folder + '/cover.jpg')
+
+            # Download album cover
+            if args.cover:
+                coverFilePath = folder + '/cover.jpg'
+            else:
+                _, coverFilePath = tempfile.mkstemp()
+            urllib.request.urlretrieve(album['cover_xl'], coverFilePath)
 
             # Create download threads and wait
             trackQueue = album['tracks']['data']
