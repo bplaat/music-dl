@@ -1,5 +1,5 @@
 # BassieBAS's Album Downloader
-A Python script / tool that downloads complete albums via the YouTube API and youtube-dl with the right metadata via the Deezer API
+A Python script / tool that downloads complete albums via yt-dlp with the right metadata from the Deezer API
 
 ## Installation
 You need to install the `mutagen` Python package:
@@ -7,14 +7,6 @@ You need to install the `mutagen` Python package:
 ```
 pip install mutagen
 ```
-
-Copy the `config.py.example` file to `config.py`:
-
-```
-cp config.py.example config.py
-```
-
-Generate YouTube Data v3 API keys add this to the `config.py` file
 
 ## Usage
 You can search and list album info with the `--list` argument:
