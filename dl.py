@@ -54,13 +54,13 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                             procents = re.findall(r'[\d\.]+%', line)
                             if len(procents) > 0:
                                 procent = float(procents[0][:-1]) / 100
-                                width = math.floor(size.columns / 2) - 2
+                                width = math.floor(size.columns * 0.5) - 2
                                 filled = math.ceil(width * procent)
-                                leftColumn = ('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60)
-                                middleColumn = 'Downloading video...'
+                                leftColumn = cut(('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60), math.floor(size.columns * 0.35))
+                                middleColumn = cut('Downloading video...', math.floor(size.columns * 0.15))
                                 printLine(index, '%s%s%s%s[%s%s]' % (
-                                    cut(leftColumn, math.ceil(size.columns / 4)), ' ' * (math.ceil(size.columns / 4) - len(leftColumn)),
-                                    cut(middleColumn, math.floor(size.columns / 4)), ' ' * (math.floor(size.columns / 4) - len(middleColumn)),
+                                    leftColumn, ' ' * (math.floor(size.columns * 0.35) - len(leftColumn)),
+                                    middleColumn, ' ' * (math.floor(size.columns * 0.15) - len(middleColumn)),
                                     '#' * filled, '-' * (width - filled)
                                 ))
 
@@ -81,12 +81,12 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                     # Rename / move video to right path
                     os.rename(temp_file_path, folderPath + '/' + escapePath(album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % track['track_position']) + ' - ' + track['title'] + '.m4a'))
 
-                    leftColumn = ('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60)
-                    middleColumn = 'Done'
+                    leftColumn = cut(('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60), math.floor(size.columns * 0.35))
+                    middleColumn = cut('Done', math.floor(size.columns * 0.15))
                     printLine(index, '%s%s%s%s[%s]' % (
-                        cut(leftColumn, math.ceil(size.columns / 4)), ' ' * (math.ceil(size.columns / 4) - len(leftColumn)),
-                        cut(middleColumn, math.floor(size.columns / 4)), ' ' * (math.floor(size.columns / 4) - len(middleColumn)),
-                        '#' * (math.floor(size.columns / 2) - 2)
+                        leftColumn, ' ' * (math.floor(size.columns * 0.35) - len(leftColumn)),
+                        middleColumn, ' ' * (math.floor(size.columns * 0.15) - len(middleColumn)),
+                        '#' * (math.floor(size.columns * 0.5) - 2)
                     ))
                     break
             except:
@@ -98,12 +98,12 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                 elif searchAttempt == 2:
                     downloadThread(index, track, 3, album['title'] + ' - ' + track['title'])
                 else:
-                    leftColumn = ('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60)
-                    middleColumn = 'Can\'t find video'
+                    leftColumn = cut(('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60), math.floor(size.columns * 0.35))
+                    middleColumn = cut('Can\'t find video', math.floor(size.columns * 0.15))
                     printLine(index, '%s%s%s%s[%s]' % (
-                        cut(leftColumn, math.ceil(size.columns / 4)), ' ' * (math.ceil(size.columns / 4) - len(leftColumn)),
-                        cut(middleColumn, math.floor(size.columns / 4)), ' ' * (math.floor(size.columns / 4) - len(middleColumn)),
-                        '-' * (math.floor(size.columns / 2) - 2)
+                        leftColumn, ' ' * (math.floor(size.columns * 0.35) - len(leftColumn)),
+                        middleColumn, ' ' * (math.floor(size.columns * 0.15) - len(middleColumn)),
+                        '-' * (math.floor(size.columns * 0.5) - 2)
                     ))
                 return
 
@@ -153,12 +153,12 @@ def main():
     printLine(0, '# ' + album['title'] + ' by ' + ', '.join(albumArtists))
     index = 1
     for track in album['tracks']['data']:
-        leftColumn = ('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60)
-        middleColumn = 'Searching video...'
+        leftColumn = cut(('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60), math.floor(size.columns * 0.35))
+        middleColumn = cut('Searching video...', math.floor(size.columns * 0.15))
         printLine(index, '%s%s%s%s[%s]' % (
-            cut(leftColumn, math.ceil(size.columns / 4)), ' ' * (math.ceil(size.columns / 4) - len(leftColumn)),
-            cut(middleColumn, math.floor(size.columns / 4)), ' ' * (math.floor(size.columns / 4) - len(middleColumn)),
-            '-' * (math.floor(size.columns / 2) - 2)
+            leftColumn, ' ' * (math.floor(size.columns * 0.35) - len(leftColumn)),
+            middleColumn, ' ' * (math.floor(size.columns * 0.15) - len(middleColumn)),
+            '-' * (math.floor(size.columns * 0.5) - 2)
         ))
 
         thread = threading.Thread(target=downloadThread, args=[index, track, 1, album['artist']['name'] + ' - ' + track['title']])
