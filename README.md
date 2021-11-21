@@ -32,3 +32,9 @@ You can download an album without the `--list` argument and with the `--cover` a
 ```
 ./dl.py "Ordinary Songs 3"
 ```
+
+You can download all albums and EP's from a artist by using the `--artist` argument:
+
+```
+./dl.py "Snails House" --artist
+```

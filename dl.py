@@ -3,18 +3,18 @@
 # Usage: ./dl.py "Ordinary Songs 3"
 # Usage: ./dl.py "Ordinary Songs 3" --list
 # Usage: ./dl.py "Ordinary Songs 3" -o ".." --list --cover
+# Usage: ./dl.py "Snails House" --artist
 
-import argparse, json, math, os, subprocess, tempfile, sys, threading, urllib.parse, urllib.request, re
+import argparse, json, math, os, subprocess, tempfile, sys, time, threading, urllib.parse, urllib.request, re
 from mutagen.mp4 import MP4, MP4Cover
 
 TRACK_DURATION_SLACK = 5
-
-size = os.get_terminal_size()
 
 def escapePath(path):
     path = path.replace('<', '_').replace('>', '_').replace(':', '_').replace('\"', '_').replace('/', '_')
     return path.replace('\\', '_').replace('|', '_').replace('?', '_').replace('*', '_')
 
+size = None
 cursorY = 0
 def printLine(y, line):
     global cursorY
@@ -75,7 +75,7 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                     file['trkn'] = [ (index, album['nb_tracks']) ]
                     file['\xa9gen'] = ', '.join([ genre['name'] for genre in album['genres']['data'] ])
                     with open(coverFilePath, 'rb') as coverFile:
-                        file["covr"] = [ MP4Cover(coverFile.read(), imageformat=MP4Cover.FORMAT_JPEG) ]
+                        file['covr'] = [ MP4Cover(coverFile.read(), imageformat=MP4Cover.FORMAT_JPEG) ]
                     file.save()
 
                     # Rename / move video to right path
@@ -107,25 +107,12 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                     ))
                 return
 
-def main():
-    global album, folderPath, coverFilePath
+args = None
+def handleAlbum(albumId):
+    global album, folderPath, coverFilePath, size
 
-    # Parse arguments
-    parser = argparse.ArgumentParser(description='A Python script / tool that downloads complete albums via the YouTube API and yt-dlp with the right metadata via the Deezer API')
-    parser.add_argument('album')
-    parser.add_argument('-o', '--output', default=os.path.expanduser('~') + '/Music', help='The output directory')
-    parser.add_argument('-l', '--list', action='store_true', help='Just list the music metadata')
-    parser.add_argument('-c', '--cover', action='store_true', help='Save album cover as a seperated file')
-    args = parser.parse_args()
-
-    # Search for album with Deezer API
-    albums = json.load(urllib.request.urlopen('https://api.deezer.com/search/album?q=' + urllib.parse.quote_plus(args.album)))['data']
-    if len(albums) == 0:
-        print('No album found!')
-        exit()
-
-    # When album is found create folder
-    album = json.load(urllib.request.urlopen('https://api.deezer.com/album/' + str(albums[0]['id'])))
+    # Query album information and list when needed
+    album = json.load(urllib.request.urlopen('https://api.deezer.com/album/' + str(albumId)))
     albumArtists = [ artist['name'] for artist in album['contributors'] ]
     if args.list:
         print('# ' + album['title'] + ' by ' + ', '.join(albumArtists))
@@ -136,10 +123,10 @@ def main():
             trackArtists = ', '.join(albumArtists + [ artist['name'] for artist in track['contributors'] if artist['name'] not in albumArtists ])
             print('%d. %s (%d:%02d) by %s' % (index, track['title'], track['duration'] / 60, track['duration'] % 60, trackArtists))
             index += 1
-        exit()
+        return
 
     # Create album download folder
-    folderPath = args.output + '/' + escapePath(album['artist']['name'] + ' - ' + album['title'])
+    folderPath = args.output + '/' + escapePath(album['artist']['name']) + '/' + escapePath(album['title'])
     os.makedirs(folderPath, exist_ok=True)
 
     # Download album cover
@@ -150,8 +137,10 @@ def main():
     urllib.request.urlretrieve(album['cover_xl'], coverFilePath)
 
     # Create download threads
+    size = os.get_terminal_size()
     printLine(0, '# ' + album['title'] + ' by ' + ', '.join(albumArtists))
     index = 1
+    threads = []
     for track in album['tracks']['data']:
         leftColumn = cut(('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60), math.floor(size.columns * 0.35))
         middleColumn = cut('Searching video...', math.floor(size.columns * 0.15))
@@ -160,11 +149,53 @@ def main():
             middleColumn, ' ' * (math.floor(size.columns * 0.15) - len(middleColumn)),
             '-' * (math.floor(size.columns * 0.5) - 2)
         ))
-
-        thread = threading.Thread(target=downloadThread, args=[index, track, 1, album['artist']['name'] + ' - ' + track['title']])
-        thread.start()
-
+        threads.append(threading.Thread(target=downloadThread, args=[index, track, 1, album['artist']['name'] + ' - ' + track['title']]))
         index += 1
+
+    # Start and wait for all threads to finish
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    printLine(0, '')
+
+def main():
+    global args
+
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='A Python script / tool that downloads complete albums via the YouTube API and yt-dlp with the right metadata via the Deezer API')
+    parser.add_argument('query')
+    parser.add_argument('-o', '--output', default=os.path.expanduser('~') + '/Music', help='The output directory')
+    parser.add_argument('-l', '--list', action='store_true', help='Just list the music metadata')
+    parser.add_argument('-c', '--cover', action='store_true', help='Save album cover as a seperated file')
+    parser.add_argument('-a', '--artist', action='store_true', help='Search query is an artist and download all its albums and EP\'s')
+    args = parser.parse_args()
+
+    # Search for artist with Deezer API
+    if args.artist:
+        artists = json.load(urllib.request.urlopen('https://api.deezer.com/search/artist?q=' + urllib.parse.quote_plus(args.query)))['data']
+        if len(artists) == 0:
+            print('No artist found!')
+            return
+
+        # Handle artists albums
+        albums = json.load(urllib.request.urlopen('https://api.deezer.com/artist/' + str(artists[0]['id']) + '/albums'))
+        for album in albums['data']:
+            if album['type'] in ['album', 'ep'] and album['record_type'] != 'single':
+                handleAlbum(album['id'])
+                if args.list:
+                    print()
+                    time.sleep(1)
+        return
+
+    # Search for album with Deezer API
+    albums = json.load(urllib.request.urlopen('https://api.deezer.com/search/album?q=' + urllib.parse.quote_plus(args.query)))['data']
+    if len(albums) == 0:
+        print('No album found!')
+        return
+
+    # Handle found album
+    handleAlbum(albums[0]['id'])
 
 if __name__ == '__main__':
     main()
