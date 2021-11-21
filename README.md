@@ -2,6 +2,8 @@
 A Python script / tool that downloads complete albums via yt-dlp with the right metadata from the Deezer API
 
 ## Installation
+You need to install [yt-dlp](https://github.com/yt-dlp/yt-dlp#installation) and [ffmpeg](https://ffmpeg.org/download.html) on your system and add its binaries to your path
+
 You need to install the `mutagen` Python package:
 
 ```
@@ -33,7 +35,7 @@ You can download an album without the `--list` argument and with the `--cover` a
 ./dl.py "Ordinary Songs 3"
 ```
 
-You can download all albums and EP's from a artist by using the `--artist` argument:
+You can download all albums and EP's from a artist by using the `--artist` argument, you could use the `--singles` option to download also all its singles:
 
 ```
 ./dl.py "Snails House" --artist

@@ -169,6 +169,7 @@ def main():
     parser.add_argument('-l', '--list', action='store_true', help='Just list the music metadata')
     parser.add_argument('-c', '--cover', action='store_true', help='Save album cover as a seperated file')
     parser.add_argument('-a', '--artist', action='store_true', help='Search query is an artist and download all its albums and EP\'s')
+    parser.add_argument('-s', '--singles', action='store_true', help='Download also singles when downloading all artists stuff')
     args = parser.parse_args()
 
     # Search for artist with Deezer API
@@ -181,7 +182,7 @@ def main():
         # Handle artists albums
         albums = json.load(urllib.request.urlopen('https://api.deezer.com/artist/' + str(artists[0]['id']) + '/albums'))
         for album in albums['data']:
-            if album['type'] in ['album', 'ep'] and album['record_type'] != 'single':
+            if args.singles or (album['type'] in ['album', 'ep'] and album['record_type'] != 'single'):
                 handleAlbum(album['id'])
                 if args.list:
                     print()
