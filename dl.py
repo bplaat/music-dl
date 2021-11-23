@@ -79,7 +79,7 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                     file.save()
 
                     # Rename / move video to right path
-                    os.rename(temp_file_path, folderPath + '/' + escapePath(album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % track['track_position']) + ' - ' + track['title'] + '.m4a'))
+                    os.rename(temp_file_path, folderPath + '/' + escapePath(album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % index) + ' - ' + track['title'] + '.m4a'))
 
                     leftColumn = cut(('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60), math.floor(size.columns * 0.35))
                     middleColumn = cut('Done', math.floor(size.columns * 0.15))
@@ -170,17 +170,20 @@ def main():
     parser.add_argument('-c', '--cover', action='store_true', help='Save album cover as a seperated file')
     parser.add_argument('-a', '--artist', action='store_true', help='Search query is an artist and download all its albums and EP\'s')
     parser.add_argument('-s', '--singles', action='store_true', help='Download also singles when downloading all artists stuff')
+    parser.add_argument('-i', '--id', action='store_true', help='Search query is an Deezer Id don\'t search album or artist')
     args = parser.parse_args()
 
     # Search for artist with Deezer API
     if args.artist:
-        artists = json.load(urllib.request.urlopen('https://api.deezer.com/search/artist?q=' + urllib.parse.quote_plus(args.query)))['data']
-        if len(artists) == 0:
-            print('No artist found!')
-            return
+        artists = None
+        if not args.id:
+            artists = json.load(urllib.request.urlopen('https://api.deezer.com/search/artist?q=' + urllib.parse.quote_plus(args.query)))['data']
+            if len(artists) == 0:
+                print('No artist found!')
+                return
 
         # Handle artists albums
-        albums = json.load(urllib.request.urlopen('https://api.deezer.com/artist/' + str(artists[0]['id']) + '/albums'))
+        albums = json.load(urllib.request.urlopen('https://api.deezer.com/artist/' + (artists != None and str(artists[0]['id']) or args.query) + '/albums'))
         for album in albums['data']:
             if args.singles or (album['type'] in ['album', 'ep'] and album['record_type'] != 'single'):
                 handleAlbum(album['id'])
@@ -190,13 +193,15 @@ def main():
         return
 
     # Search for album with Deezer API
-    albums = json.load(urllib.request.urlopen('https://api.deezer.com/search/album?q=' + urllib.parse.quote_plus(args.query)))['data']
-    if len(albums) == 0:
-        print('No album found!')
-        return
+    albums = None
+    if not args.id:
+        albums = json.load(urllib.request.urlopen('https://api.deezer.com/search/album?q=' + urllib.parse.quote_plus(args.query)))['data']
+        if len(albums) == 0:
+            print('No album found!')
+            return
 
     # Handle found album
-    handleAlbum(albums[0]['id'])
+    handleAlbum(albums != None and albums[0]['id'] or args.query)
 
 if __name__ == '__main__':
     main()
