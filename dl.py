@@ -5,8 +5,7 @@
 # Usage: ./dl.py "Ordinary Songs 3" -o ".." --list --cover
 # Usage: ./dl.py "Snails House" --artist
 
-import argparse, json, math, os, subprocess, tempfile, sys, time, threading, urllib.parse, urllib.request, re
-from mutagen.mp4 import MP4, MP4Cover
+import argparse, json, math, mutagen.mp4, os, subprocess, tempfile, sys, time, threading, urllib.parse, urllib.request, re
 
 TRACK_DURATION_SLACK = 5
 
@@ -16,14 +15,19 @@ def escapePath(path):
 
 size = None
 cursorY = 0
+printLock = threading.Lock()
 def printLine(y, line):
     global cursorY
-    if (y <= cursorY):
-        sys.stdout.write('\033[F' * (cursorY - y))
-    if (y > cursorY):
-        sys.stdout.write('\033[E' * (y - cursorY))
-    sys.stdout.write('\033[K' + line + '\n')
-    cursorY = y + 1
+    printLock.acquire()
+    try:
+        if (y <= cursorY):
+            sys.stdout.write('\033[F' * (cursorY - y))
+        if (y > cursorY):
+            sys.stdout.write('\033[E' * (y - cursorY))
+        sys.stdout.write('\033[K' + line + '\n')
+        cursorY = y + 1
+    finally:
+        printLock.release()
 
 def cut(string, width):
     if len(string) > width - 4:
@@ -65,7 +69,7 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                                 ))
 
                     # Correct video metadata
-                    file = MP4(temp_file_path)
+                    file = mutagen.mp4.MP4(temp_file_path)
                     file['\xa9nam'] = track['title']
                     file['\xa9alb'] = album['title']
                     albumArtists = [ artist['name'] for artist in album['contributors'] ]
@@ -75,7 +79,7 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                     file['trkn'] = [ (index, album['nb_tracks']) ]
                     file['\xa9gen'] = ', '.join([ genre['name'] for genre in album['genres']['data'] ])
                     with open(coverFilePath, 'rb') as coverFile:
-                        file['covr'] = [ MP4Cover(coverFile.read(), imageformat=MP4Cover.FORMAT_JPEG) ]
+                        file['covr'] = [ mutagen.mp4.MP4Cover(coverFile.read(), imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG) ]
                     file.save()
 
                     # Rename / move video to right path
