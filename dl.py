@@ -161,6 +161,10 @@ def handleAlbum(albumId):
         thread.start()
     for thread in threads:
         thread.join()
+
+    # Clear screen
+    for i in range(index):
+        printLine(i, '')
     printLine(0, '')
 
 def main():
