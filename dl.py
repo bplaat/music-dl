@@ -50,9 +50,8 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                     searchProcess.terminate()
 
                     # Download video audio
-                    _, temp_file_path = tempfile.mkstemp()
-                    temp_file_path += '.m4a'
-                    with subprocess.Popen(['yt-dlp', '--newline', '-f', 'bestaudio[ext=m4a]', 'https://www.youtube.com/watch?v=' + videoJson['id'], '-o', temp_file_path], stdout=subprocess.PIPE) as downloadProcess:
+                    path = folderPath + '/' + escapePath(album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % index) + ' - ' + track['title'] + '.m4a')
+                    with subprocess.Popen(['yt-dlp', '--newline', '-f', 'bestaudio[ext=m4a]', 'https://www.youtube.com/watch?v=' + videoJson['id'], '-o', path], stdout=subprocess.PIPE) as downloadProcess:
                         while downloadProcess.poll() is None:
                             line = downloadProcess.stdout.readline().decode()
                             procents = re.findall(r'[\d\.]+%', line)
@@ -69,7 +68,7 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                                 ))
 
                     # Correct video metadata
-                    file = mutagen.mp4.MP4(temp_file_path)
+                    file = mutagen.mp4.MP4(path)
                     file['\xa9nam'] = track['title']
                     file['\xa9alb'] = album['title']
                     albumArtists = [ artist['name'] for artist in album['contributors'] ]
@@ -81,9 +80,6 @@ def downloadThread(index, track, searchAttempt, searchQuery):
                     with open(coverFilePath, 'rb') as coverFile:
                         file['covr'] = [ mutagen.mp4.MP4Cover(coverFile.read(), imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG) ]
                     file.save()
-
-                    # Rename / move video to right path
-                    os.rename(temp_file_path, folderPath + '/' + escapePath(album['artist']['name'] + ' - ' + album['title'] + ' - ' + (('%0' + str(len(str(album['nb_tracks']))) + 'd') % index) + ' - ' + track['title'] + '.m4a'))
 
                     leftColumn = cut(('%0' + str(len(str(album['nb_tracks']))) + 'd. %s (%d:%02d)') % (index, track['title'], track['duration'] / 60, track['duration'] % 60), math.floor(size.columns * 0.35))
                     middleColumn = cut('Done', math.floor(size.columns * 0.15))
@@ -131,6 +127,9 @@ def handleAlbum(albumId):
 
     # Create album download folder
     folderPath = args.output + '/' + escapePath(album['artist']['name']) + '/' + escapePath(album['title'])
+    if os.path.isdir(folderPath):
+        print('Skipping ' + album['title'] + ' by ' + ', '.join(albumArtists) + ' it already exists...')
+        return
     os.makedirs(folderPath, exist_ok=True)
 
     # Download album cover
