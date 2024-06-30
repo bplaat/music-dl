@@ -1,0 +1,16 @@
+body {
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+a, img {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  transform: translateY(5px);
+}

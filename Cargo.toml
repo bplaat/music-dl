@@ -1,0 +1,26 @@
+[package]
+name = "music-dl"
+version = "0.1.0"
+edition = "2021"
+authors = ["Bastiaan van der Plaat <bastiaan.v.d.plaat@gmail.com>"]
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+mp4ameta = "0.11"
+percent-encoding = "2.3"
+rust-embed = "8.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tao = "0.28"
+terminal_size = "0.3"
+ureq = { version = "2.9", features = ["json"] }
+webbrowser = "1.0"
+wry = { version = "0.41", default-features = false, features = ["os-webview", "protocol"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+panic = "abort"
+overflow-checks = false

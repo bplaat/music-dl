@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music Downloader</title>
+    <link rel="icon" href="icon.svg" />
+    <link rel="stylesheet" href="bulma.min.css" />
+    <link rel="stylesheet" href="app.css" />
+    <script src="vue.min.js"></script>
+  </head>
+  <body class="p-4">
+    <div id="app">
+      <div class="mb-4">
+        <p class="is-pulled-right">
+          Made by
+          <a href="https://bplaat.nl/" target="_blank">
+            Bastiaan van der Plaat
+          </a>
+        </p>
+        <h1 class="title">
+          <img src="icon.svg" class="logo mr-1" alt="Logo" />
+          Music Downloader
+        </h1>
+      </div>
+
+      <div class="columns">
+        <div class="column p-4">
+          <h2 class="subtitle">Search</h2>
+          <form @submit.prevent="search">
+            <div class="field has-addons">
+              <div class="control is-expanded">
+                <input
+                  class="input is-fullwidth"
+                  type="text"
+                  placeholder="Search for a artist or album..."
+                  v-model="searchQuery"
+                />
+              </div>
+              <div class="control">
+                <button class="button is-info">Search</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="column p-4">
+          <h2 class="subtitle">Downloading</h2>
+          <p>Nothing is downloading</p>
+        </div>
+
+        <div class="column p-4">
+          <h2 class="subtitle">Done</h2>
+          <p>Nothing is done</p>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
